@@ -18,6 +18,7 @@ package org.springframework.data.neo4j.core.mapping;
 import java.lang.reflect.Field;
 import java.util.Optional;
 
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.data.annotation.ReadOnlyProperty;
 import org.springframework.data.mapping.Association;
 import org.springframework.data.mapping.MappingException;
@@ -31,6 +32,7 @@ import org.springframework.data.neo4j.core.schema.CompositeProperty;
 import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.schema.RelationshipProperties;
 import org.springframework.data.neo4j.core.schema.TargetNode;
+import org.springframework.data.neo4j.core.schema.TransientType;
 import org.springframework.data.util.Lazy;
 import org.springframework.data.util.ReflectionUtils;
 import org.springframework.data.util.TypeInformation;
@@ -60,6 +62,8 @@ final class DefaultNeo4jPersistentProperty extends AnnotationBasedPersistentProp
 
 	private final Lazy<Neo4jPersistentPropertyConverter<?>> customConversion;
 
+	private final Lazy<Boolean> isTransient;
+
 	/**
 	 * Creates a new {@link AnnotationBasedPersistentProperty}.
 	 *
@@ -81,6 +85,15 @@ final class DefaultNeo4jPersistentProperty extends AnnotationBasedPersistentProp
 				   || this.mappingContext.hasCustomWriteTarget(targetType) // Some converter in the context can do this
 				   || isAnnotationPresent(ConvertWith.class) // An explicit converter can do this
 				   || isComposite(); // Our composite converter can do this
+		});
+
+		this.isTransient = Lazy.of(() -> {
+			if (super.isTransient()) {
+				return true;
+			} else {
+				Class<?> targetType = getActualType();
+				return AnnotatedElementUtils.hasAnnotation(targetType, TransientType.class);
+			}
 		});
 
 		this.isAssociation = Lazy.of(() -> {
@@ -309,5 +322,10 @@ final class DefaultNeo4jPersistentProperty extends AnnotationBasedPersistentProp
 
 		Class<org.springframework.data.neo4j.core.schema.Property> typeOfAnnotation = org.springframework.data.neo4j.core.schema.Property.class;
 		return isAnnotationPresent(ReadOnlyProperty.class) || (isAnnotationPresent(typeOfAnnotation) && getRequiredAnnotation(typeOfAnnotation).readOnly());
+	}
+
+	@Override
+	public boolean isTransient() {
+		return isTransient.get();
 	}
 }

@@ -71,6 +71,7 @@ import org.springframework.data.neo4j.core.schema.Relationship;
 import org.springframework.data.neo4j.core.schema.RelationshipId;
 import org.springframework.data.neo4j.core.schema.RelationshipProperties;
 import org.springframework.data.neo4j.core.schema.TargetNode;
+import org.springframework.data.neo4j.core.schema.TransientType;
 import org.springframework.data.neo4j.integration.shared.common.FriendshipRelationship;
 import org.springframework.data.neo4j.integration.shared.conversion.ThingWithCompositeProperties;
 import org.springframework.data.neo4j.integration.shared.conversion.ThingWithCustomTypes;
@@ -651,6 +652,13 @@ class Neo4jMappingContextTest {
 		assertThat(children).containsExactly("A2", "A3", "A4");
 	}
 
+	@Test
+	void fieldWithTransientTypeIsIgnored() throws ClassNotFoundException {
+		Neo4jMappingContext schema = new Neo4jMappingContext();
+		Neo4jPersistentEntity<?> entity = schema.getPersistentEntity(WithIgnoredType.class);
+		assertThat(entity.getPersistentProperty("ignoredField")).isNull();
+	}
+
 	static class EntityWithPostLoadMethods {
 
 		String m1;
@@ -1096,5 +1104,19 @@ class Neo4jMappingContextTest {
 		@Override public MissingId compose(Map<String, Value> source,  Neo4jConversionService conversionService) {
 			return null;
 		}
+	}
+
+	@TransientType
+	public static class IgnoredType {
+
+	}
+
+	@Node
+	static class WithIgnoredType {
+		@Id @GeneratedValue @SuppressWarnings("unused")
+		private Long id;
+
+		@SuppressWarnings("unused")
+		private IgnoredType ignoredField;
 	}
 }
